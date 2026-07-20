@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "appVersion": "1.0.0",
+  "exportedAt": "2026-01-01T00:00:00.000Z",
+  "meta": {
+    "title": "職 務 経 歴 書",
+    "date": "2026年1月1日",
+    "name": "サンプル 太郎"
+  },
+  "summary": "Webアプリケーションの設計・実装・運用保守を経験。利用者の操作性と保守性を意識し、チームで相談しながら改善を積み重ねてきました。",
+  "companies": [
+    {
+      "name": "株式会社サンプル",
+      "period": "2022年4月〜現在",
+      "companyMeta": "事業内容：Webサービス開発・運用",
+      "projects": [
+        {
+          "start": "2022年4月",
+          "end": "現在",
+          "title": "ECサイト開発",
+          "description": "商品管理画面の設計・実装\n注文処理の改善\nテストと運用手順の整備",
+          "phases": "要件整理、設計、実装、テスト、運用保守",
+          "achievements": "入力ミスを減らす画面改善\n作業手順の文書化",
+          "technologies": "PHP\nJavaScript\nSQL",
+          "role": "役割：開発メンバー\n体制：5名"
+        },
+        {
+          "start": "2024年1月",
+          "end": "2025年3月",
+          "title": "社内業務システム開発",
+          "description": "業務フローの整理\n一覧画面と検索機能の実装\nリリース後の問い合わせ対応",
+          "phases": "調査、設計、実装、テスト、運用保守",
+          "achievements": "",
+          "technologies": "HTML/CSS\nJavaScript\nSQLite",
+          "role": "役割：開発メンバー"
+        }
+      ]
+    }
+  ],
+  "personalProjects": [
+    {
+      "start": "2025年4月",
+      "end": "現在",
+      "title": "個人学習アプリ",
+      "description": "小規模なデータ入力アプリを制作。使いやすさを確認しながら画面を改善しています。",
+      "technologies": "HTML/CSS\nJavaScript"
+    }
+  ],
+  "skillsText": "要件整理から運用保守までの開発工程\n入力画面・一覧画面の改善\n基本的なSQLとテスト設計",
+  "selfDevelopment": "公式ドキュメントを読み、動作確認用の小さなサンプルを作りながら学習しています。",
+  "selfPr": [
+    {
+      "title": "利用者の視点で改善する姿勢",
+      "body": "操作する人が迷わないかを確認し、必要に応じて入力項目や表示順を見直します。"
+    }
+  ],
+  "footer": "以 上",
+  "visibility": {
+    "summary": true,
+    "companies": true,
+    "personalProjects": true,
+    "skills": true,
+    "selfDevelopment": true,
+    "selfPr": true
+  }
+}

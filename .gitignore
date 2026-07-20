@@ -1,0 +1,6 @@
+*.private.json
+*.local.json
+.private-terms.local
+/private/
+*.pdf
+.DS_Store

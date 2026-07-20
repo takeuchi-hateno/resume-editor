@@ -1,0 +1,76 @@
+name: Static privacy and syntax check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check files and syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f index.html
+          if find . -path './.git' -prune -o -path './private' -prune -o -type f -name '*.private.json' -print -quit | grep -q .; then
+            echo 'Private JSON exists in the checkout.' >&2
+            exit 1
+          fi
+          if git ls-files | grep -E '(^|/)private/|\.private\.json$|\.pdf$'; then
+            echo 'A private path or PDF is tracked.' >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class BasicHTMLParser(HTMLParser):
+              pass
+
+          for path in (Path('index.html'), Path('resume_pdf_editor.html')):
+              parser = BasicHTMLParser()
+              parser.feed(path.read_text(encoding='utf-8'))
+              parser.close()
+          PY
+
+          python3 - <<'PY' > /tmp/resume-inline-scripts.js
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class ScriptParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.in_script = False
+                  self.parts = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'script':
+                      self.in_script = True
+
+              def handle_endtag(self, tag):
+                  if tag == 'script':
+                      self.in_script = False
+
+              def handle_data(self, data):
+                  if self.in_script:
+                      self.parts.append(data)
+
+          parser = ScriptParser()
+          parser.feed(Path('resume_pdf_editor.html').read_text(encoding='utf-8'))
+          print(''.join(parser.parts))
+          PY
+          node --check /tmp/resume-inline-scripts.js
+
+          if grep -RInE 'https?://' --include='*.html' --include='*.js' --exclude-dir=.git .; then
+            echo 'External HTTP/HTTPS communication destination found in application files.' >&2
+            exit 1
+          fi

@@ -1,0 +1,1437 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <title>職務経歴書 PDF生成ツール</title>
+  <style>
+    :root {
+      --bg: #eef1f5;
+      --panel: #ffffff;
+      --border: #d6dbe3;
+      --text: #1f2937;
+      --muted: #687386;
+      --accent: #275efe;
+      --danger: #c83b3b;
+      --preview-scale: 0.9;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      color: var(--text);
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #172033;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
+      z-index: 10;
+    }
+
+    .topbar h1 {
+      margin: 0 auto 0 0;
+      font-size: 16px;
+      letter-spacing: .02em;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #fff;
+      color: #172033;
+      font-weight: 600;
+    }
+
+    .btn:hover { filter: brightness(.96); }
+    .btn.primary { background: #4f76ff; color: #fff; }
+    .btn.dark { background: #28344d; color: #fff; border-color: #536078; }
+    .btn.danger { color: #fff; background: var(--danger); }
+    .btn.small { padding: 5px 8px; font-size: 12px; border-radius: 6px; }
+
+    .save-status {
+      color: #c8d3ea;
+      font-size: 12px;
+      min-width: 112px;
+      text-align: right;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .privacy-note,
+    .warning {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .privacy-note { background: #fff7df; border: 1px solid #efd58d; color: #604b0b; }
+    .warning { background: #fff0f0; border: 1px solid #e4a4a4; color: #8a2424; }
+    .warning[hidden], .privacy-note[hidden] { display: none; }
+
+    .mobile-tabs { display: none; }
+    .mobile-tabs button[aria-selected="true"] { background: #4f76ff; color: #fff; }
+    .data-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .visibility-grid { display: grid; gap: 8px; }
+    .visibility-grid label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+    .density-control { display: inline-flex; align-items: center; gap: 6px; }
+    .density-control select { border: 0; border-radius: 999px; padding: 6px 9px; color: #fff; background: #28344d; }
+    .dialog-card { max-width: min(520px, calc(100vw - 32px)); border: 0; border-radius: 12px; padding: 22px; color: var(--text); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+    .dialog-card::backdrop { background: rgba(10, 17, 30, .6); }
+    .dialog-card h2 { margin: 0 0 10px; font-size: 18px; }
+    .dialog-card p { line-height: 1.65; font-size: 13px; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(390px, 42vw) 1fr;
+    }
+
+    .editor-pane {
+      overflow: auto;
+      padding: 14px;
+      border-right: 1px solid var(--border);
+      background: #f7f8fb;
+    }
+
+    .preview-pane {
+      position: relative;
+      overflow: auto;
+      padding: 28px;
+      background: #cfd4dc;
+    }
+
+    .panel {
+      margin: 0 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+      overflow: hidden;
+    }
+
+    .panel > summary {
+      list-style: none;
+      padding: 12px 14px;
+      font-weight: 700;
+      background: #fff;
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+    }
+
+    .panel[open] > summary { border-bottom-color: var(--border); }
+    .panel > summary::-webkit-details-marker { display: none; }
+    .panel > summary::before { content: "▶"; display: inline-block; margin-right: 8px; font-size: 11px; transition: transform .16s; }
+    .panel[open] > summary::before { transform: rotate(90deg); }
+
+    .panel-body { padding: 14px; }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .field:last-child { margin-bottom: 0; }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #455064;
+    }
+
+    input[type="text"], input[type="date"], textarea {
+      width: 100%;
+      border: 1px solid #cbd2dc;
+      border-radius: 7px;
+      padding: 9px 10px;
+      color: #172033;
+      background: #fff;
+      outline: none;
+    }
+
+    textarea { resize: vertical; min-height: 78px; line-height: 1.55; }
+    textarea.small-area { min-height: 56px; }
+    textarea.large-area { min-height: 140px; }
+
+    input:focus, textarea:focus {
+      border-color: #6f8cff;
+      box-shadow: 0 0 0 3px rgba(79,118,255,.13);
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+    .item-card {
+      border: 1px solid #d8dde6;
+      border-radius: 9px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #fbfcfe;
+    }
+
+    .item-card:last-child { margin-bottom: 0; }
+
+    .item-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .item-title {
+      margin-right: auto;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .hint {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .add-row { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+    .json-area {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      min-height: 240px;
+    }
+
+    .preview-toolbar {
+      position: sticky;
+      top: -18px;
+      z-index: 5;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin: -10px 0 16px;
+      pointer-events: none;
+    }
+
+    .preview-toolbar .chip {
+      pointer-events: auto;
+      background: rgba(28,38,57,.88);
+      color: #fff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+    }
+
+    .document-stage {
+      width: calc(210mm * var(--preview-scale));
+      min-height: calc(297mm * var(--preview-scale));
+      margin: 0 auto 40px;
+    }
+
+    .resume-document {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 18mm 17mm 18mm;
+      background: #fff;
+      color: #111;
+      box-shadow: 0 6px 25px rgba(0,0,0,.24);
+      transform: scale(var(--preview-scale));
+      transform-origin: top left;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Noto Serif JP", serif;
+      font-size: 10.2pt;
+      line-height: 1.42;
+      overflow-wrap: anywhere;
+    }
+
+    .resume-title {
+      margin: 0 0 2mm;
+      text-align: center;
+      letter-spacing: .32em;
+      font-size: 19pt;
+      font-weight: 700;
+    }
+
+    .resume-meta {
+      margin: 0 0 6mm auto;
+      width: max-content;
+      text-align: left;
+      line-height: 1.45;
+    }
+
+    .resume-section {
+      margin: 0 0 6mm;
+    }
+
+    .resume-section-title {
+      margin: 0 0 1.5mm;
+      font-weight: 700;
+      font-size: 11pt;
+      break-after: avoid;
+    }
+
+    .resume-section-title::before { content: "■"; margin-right: .25em; }
+
+    .resume-paragraph {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    .company {
+      margin: 0 0 8mm;
+      break-inside: auto;
+    }
+
+    .company-heading {
+      margin: 0 0 .5mm;
+      font-size: 10.6pt;
+      break-after: avoid;
+    }
+
+    .company-heading::before { content: "◇"; }
+    .company-meta { margin: 0 0 .8mm; white-space: pre-wrap; }
+
+    .experience-table,
+    .personal-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 9.4pt;
+      line-height: 1.38;
+    }
+
+    .experience-table th,
+    .experience-table td,
+    .personal-table th,
+    .personal-table td {
+      border: .5pt solid #222;
+      padding: 1.5mm 1.7mm;
+      vertical-align: top;
+      white-space: pre-wrap;
+    }
+
+    .experience-table th,
+    .personal-table th {
+      text-align: center;
+      font-weight: 400;
+      padding-top: .5mm;
+      padding-bottom: .5mm;
+    }
+
+    .experience-table .period-col { width: 14%; }
+    .experience-table .content-col { width: 53%; }
+    .experience-table .tech-col { width: 17%; }
+    .experience-table .role-col { width: 16%; }
+
+    .period-cell { text-align: center; line-height: 1.55; }
+    .job-title { font-weight: 700; margin-bottom: 3mm; }
+    .job-title::before { content: "■"; margin-right: .15em; }
+    .sub-label { margin-top: 2.5mm; font-weight: 700; }
+    .bullet-line { display: block; padding-left: .7em; text-indent: -.7em; }
+    .bullet-line::before { content: "・"; }
+
+    .personal-table .period-col { width: 14%; }
+    .personal-table .content-col { width: 70%; }
+    .personal-table .tech-col { width: 16%; }
+
+    .simple-list { margin: 0; padding: 0; list-style: none; }
+    .simple-list li { padding-left: .8em; text-indent: -.8em; }
+    .simple-list li::before { content: "・"; }
+
+    .pr-item { margin: 0 0 4mm; break-inside: avoid; }
+    .pr-heading { margin: 0 0 .7mm; }
+    .pr-heading::before { content: "・"; }
+    .pr-body { margin: 0; white-space: pre-wrap; }
+    .end-mark { text-align: right; letter-spacing: 1.2em; margin-top: 2mm; }
+
+    .empty-note { color: #777; font-style: italic; }
+
+    .density-compact .resume-document { font-size: 9.5pt; line-height: 1.3; }
+    .density-compact .resume-section { margin-bottom: 4mm; }
+    .density-compact .company { margin-bottom: 5mm; }
+    .density-compact .experience-table, .density-compact .personal-table { font-size: 8.8pt; line-height: 1.25; }
+
+    @media (max-width: 980px) {
+      .mobile-tabs { display: flex; gap: 8px; padding: 8px 12px; background: #fff; border-bottom: 1px solid var(--border); }
+      .mobile-tabs button { flex: 1; border: 1px solid var(--border); border-radius: 7px; padding: 8px; background: #fff; }
+      .workspace { grid-template-columns: 1fr; overflow: auto; }
+      .editor-pane, .preview-pane { overflow: visible; }
+      .app { height: auto; overflow: visible; }
+      .preview-pane { min-height: 800px; }
+      .workspace.mobile-preview .editor-pane { display: none; }
+      .workspace.mobile-input .preview-pane { display: none; }
+      .topbar { align-items: flex-start; flex-wrap: wrap; }
+      .topbar h1 { width: 100%; }
+      .header-actions { width: 100%; }
+      .save-status { margin-right: auto; text-align: left; }
+    }
+
+    @page {
+      size: A4;
+      margin: 14mm 13mm 15mm;
+    }
+
+    @media print {
+      html, body { background: #fff !important; }
+      .topbar, .editor-pane, .preview-toolbar { display: none !important; }
+      .mobile-tabs, .warning, .privacy-note, .density-control { display: none !important; }
+      .preview-pane > .data-note { display: none !important; }
+      .app, .workspace, .preview-pane {
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #fff !important;
+      }
+      .document-stage {
+        width: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+      }
+      .resume-document {
+        width: auto !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        transform: none !important;
+        font-size: 9.35pt;
+        line-height: 1.34;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      .resume-title { margin-bottom: 1mm; font-size: 18pt; }
+      .resume-meta { margin-bottom: 4.5mm; }
+      .resume-section { margin-bottom: 4.5mm; }
+      .company { margin-bottom: 5.5mm; }
+      .resume-section-title, .company-heading, table thead { break-after: avoid; }
+      .experience-table, .personal-table { font-size: 8.55pt; line-height: 1.28; }
+      .experience-table th, .experience-table td, .personal-table th, .personal-table td { padding: 1.1mm 1.35mm; }
+      .experience-table tr, .personal-table tr { break-inside: auto; }
+      .job-title { margin-bottom: 2mm; }
+      .sub-label { margin-top: 1.8mm; }
+      .pr-item { break-inside: auto; margin-bottom: 3mm; }
+      .resume-section, .company, .pr-item, table, tr, .company-heading { break-inside: avoid; }
+      .density-compact .resume-document { font-size: 8.9pt; line-height: 1.22; }
+      .density-compact .resume-section { margin-bottom: 3mm; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <h1>職務経歴書 PDF生成ツール</h1>
+    <span id="saveStatus" class="save-status" aria-live="polite">保存準備中</span>
+    <div class="header-actions">
+      <button id="exportJsonBtn" class="btn dark" type="button">JSON書き出し</button>
+      <button id="importJsonBtn" class="btn dark" type="button">JSON読み込み</button>
+      <button id="printBtn" class="btn primary" type="button">PDF出力 / 印刷</button>
+      <button id="newBtn" class="btn" type="button">新規作成</button>
+      <button id="sampleBtn" class="btn" type="button">サンプル読込</button>
+      <button id="undoBtn" class="btn dark" type="button" disabled>元に戻す</button>
+      <button id="privacyBtn" class="btn dark" type="button">プライバシー説明</button>
+    </div>
+    <input id="importFile" type="file" accept="application/json,.json" hidden />
+  </header>
+
+  <nav class="mobile-tabs" aria-label="表示切替">
+    <button id="inputTabBtn" type="button" aria-selected="true">入力</button>
+    <button id="previewTabBtn" type="button" aria-selected="false">プレビュー</button>
+  </nav>
+
+  <main class="workspace">
+    <aside class="editor-pane" id="editorPane">
+      <details class="panel" data-panel-key="basic" open>
+        <summary>基本情報</summary>
+        <div class="panel-body">
+          <div class="field"><label for="titleInput">書類タイトル</label><input id="titleInput" autocomplete="off" data-path="meta.title" type="text"></div>
+          <div class="grid-2">
+            <div class="field"><label for="nameInput">氏名</label><input id="nameInput" autocomplete="off" data-path="meta.name" type="text"></div>
+            <div class="field"><label for="dateInput">作成日</label><input id="dateInput" autocomplete="off" data-path="meta.date" type="text" placeholder="2026年7月13日"></div>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="summary" open>
+        <summary>職務経歴要約</summary>
+        <div class="panel-body">
+          <div class="field">
+            <label for="summaryInput">要約</label>
+            <textarea id="summaryInput" autocomplete="off" class="large-area" data-path="summary"></textarea>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="companies" open>
+        <summary>職務経歴</summary>
+        <div class="panel-body">
+          <p class="hint">会社・案件は追加、削除、並べ替えできます。箇条書きは1行につき1項目です。</p>
+          <div id="companiesEditor"></div>
+          <div class="add-row"><button class="btn small primary" id="addCompanyBtn">会社を追加</button></div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="personalProjects">
+        <summary>個人開発・副業</summary>
+        <div class="panel-body">
+          <div id="personalProjectsEditor"></div>
+          <div class="add-row"><button class="btn small primary" id="addPersonalProjectBtn">項目を追加</button></div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="skills">
+        <summary>得意分野・活かせる知識</summary>
+        <div class="panel-body">
+          <div class="field">
+            <label>1行につき1項目</label>
+            <textarea class="large-area" data-path="skillsText"></textarea>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="selfDevelopment">
+        <summary>自己研鑽</summary>
+        <div class="panel-body">
+          <div class="field"><label>本文</label><textarea data-path="selfDevelopment"></textarea></div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="selfPr">
+        <summary>自己PR</summary>
+        <div class="panel-body">
+          <div id="selfPrEditor"></div>
+          <div class="add-row"><button class="btn small primary" id="addSelfPrBtn">自己PR項目を追加</button></div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="visibility">
+        <summary>表示設定</summary>
+        <div class="panel-body">
+          <p class="hint">チェックを外したセクションはプレビューと印刷に表示しません。</p>
+          <div class="visibility-grid">
+            <label><input type="checkbox" data-visibility="summary"> 職務経歴要約</label>
+            <label><input type="checkbox" data-visibility="companies"> 職務経歴</label>
+            <label><input type="checkbox" data-visibility="personalProjects"> 個人開発・副業</label>
+            <label><input type="checkbox" data-visibility="skills"> 得意分野・活かせる知識</label>
+            <label><input type="checkbox" data-visibility="selfDevelopment"> 自己研鑽</label>
+            <label><input type="checkbox" data-visibility="selfPr"> 自己PR</label>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="json">
+        <summary>JSON確認・直接編集</summary>
+        <div class="panel-body">
+          <p class="hint">「JSONを反映」で入力欄とプレビューへ反映します。誤ったJSONは反映されません。</p>
+          <textarea id="rawJson" class="json-area"></textarea>
+          <div class="add-row" style="gap:8px;">
+            <button id="copyJsonBtn" class="btn small">コピー</button>
+            <button id="applyJsonBtn" class="btn small primary">JSONを反映</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" data-panel-key="dataOperations">
+        <summary>データ操作</summary>
+        <div class="panel-body">
+          <p class="hint">入力内容はブラウザのLocalStorageへ軽い遅延を付けて自動保存されます。サーバーへ送信しません。</p>
+          <p class="data-note">ブラウザデータを削除すると復元できません。別PC・別ブラウザへ自動同期もされません。必要に応じてJSONを安全な場所へバックアップしてください。</p>
+          <button id="resetBtn" class="btn danger" type="button">空の状態に初期化</button>
+          <button id="deleteStorageBtn" class="btn danger" type="button">この端末の保存データを削除</button>
+        </div>
+      </details>
+    </aside>
+
+    <section class="preview-pane" id="previewPane">
+      <div class="preview-toolbar">
+        <span class="chip">A4プレビュー・入力即時反映</span>
+        <label class="chip density-control">印刷密度
+          <select id="densitySelect" aria-label="印刷密度">
+            <option value="standard">標準</option>
+            <option value="compact">コンパクト</option>
+          </select>
+        </label>
+      </div>
+      <p id="privacyNote" class="privacy-note">JSONには氏名・会社名などの個人情報が含まれる可能性があります。書き出したファイルやPDFを公開リポジトリへ追加しないでください。</p>
+      <p id="layoutWarning" class="warning" hidden role="status"></p>
+      <div class="document-stage" id="documentStage">
+        <article class="resume-document" id="resumePreview"></article>
+      </div>
+      <p class="data-note">PDF保存: 「PDF出力 / 印刷」→ 印刷先で「PDFに保存」を選択してください。印刷前に最新の入力を保存します。</p>
+    </section>
+  </main>
+</div>
+
+<dialog id="welcomeDialog" class="dialog-card">
+  <h2>職務経歴書を作成しましょう</h2>
+  <p>このアプリは入力内容をこのブラウザ内だけで扱います。公開サンプルには実在人物・企業・案件の情報を使用していません。</p>
+  <div class="dialog-actions">
+    <button id="welcomeEmptyBtn" class="btn primary" type="button">空の職務経歴書を作る</button>
+    <button id="welcomeSampleBtn" class="btn" type="button">サンプルで試す</button>
+    <button id="welcomeImportBtn" class="btn" type="button">JSONを読み込む</button>
+  </div>
+</dialog>
+
+<dialog id="privacyDialog" class="dialog-card">
+  <h2>プライバシーと保存について</h2>
+  <p>入力・JSON・プレビューはブラウザ内で処理し、サーバーや外部APIへ送信しません。LocalStorageは端末・ブラウザ単位の保存です。ブラウザデータ削除、シークレットモード終了、容量不足などで失われる可能性があります。</p>
+  <p>JSON書き出しやPDF保存の内容には個人情報が含まれる可能性があります。ファイル名や内容を確認し、Gitへ追加・公開しないでください。</p>
+  <div class="dialog-actions"><button id="privacyCloseBtn" class="btn primary" type="button">閉じる</button></div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'resume_pdf_editor_data_v1';
+  const BACKUP_KEY = 'resume_pdf_editor_backup_v1';
+  const ONBOARDING_KEY = 'resume_pdf_editor_onboarding_seen_v1';
+  const DENSITY_KEY = 'resume_pdf_editor_print_density_v1';
+  const APP_VERSION = '1.0.0';
+  const MAX_IMPORT_BYTES = 1024 * 1024;
+
+  const EMPTY_DATA = {
+    schemaVersion: 1,
+    appVersion: APP_VERSION,
+    exportedAt: '',
+    meta: { title: '職 務 経 歴 書', date: '', name: '' },
+    summary: '',
+    companies: [],
+    personalProjects: [],
+    skillsText: '',
+    selfDevelopment: '',
+    selfPr: [],
+    footer: '以 上',
+    visibility: {
+      summary: true,
+      companies: true,
+      personalProjects: true,
+      skills: true,
+      selfDevelopment: true,
+      selfPr: true
+    }
+  };
+
+  const SAMPLE_DATA = {
+    schemaVersion: 1,
+    appVersion: APP_VERSION,
+    exportedAt: '2026-01-01T00:00:00.000Z',
+    meta: { title: '職 務 経 歴 書', date: '2026年1月1日', name: 'サンプル 太郎' },
+    summary: 'Webアプリケーションの設計・実装・運用保守を経験。利用者の操作性と保守性を意識し、チームで相談しながら改善を積み重ねてきました。',
+    companies: [{
+      name: '株式会社サンプル',
+      period: '2022年4月〜現在',
+      companyMeta: '事業内容：Webサービス開発・運用',
+      projects: [{
+        start: '2022年4月',
+        end: '現在',
+        title: 'ECサイト開発',
+        description: '商品管理画面の設計・実装\n注文処理の改善\nテストと運用手順の整備',
+        phases: '要件整理、設計、実装、テスト、運用保守',
+        achievements: '入力ミスを減らす画面改善\n作業手順の文書化',
+        technologies: 'PHP\nJavaScript\nSQL',
+        role: '役割：開発メンバー\n体制：5名'
+      }, {
+        start: '2024年1月',
+        end: '2025年3月',
+        title: '社内業務システム開発',
+        description: '業務フローの整理\n一覧画面と検索機能の実装\nリリース後の問い合わせ対応',
+        phases: '調査、設計、実装、テスト、運用保守',
+        achievements: '',
+        technologies: 'HTML/CSS\nJavaScript\nSQLite',
+        role: '役割：開発メンバー'
+      }]
+    }],
+    personalProjects: [{
+      start: '2025年4月',
+      end: '現在',
+      title: '個人学習アプリ',
+      description: '小規模なデータ入力アプリを制作。使いやすさを確認しながら画面を改善しています。',
+      technologies: 'HTML/CSS\nJavaScript'
+    }],
+    skillsText: '要件整理から運用保守までの開発工程\n入力画面・一覧画面の改善\n基本的なSQLとテスト設計',
+    selfDevelopment: '公式ドキュメントを読み、動作確認用の小さなサンプルを作りながら学習しています。',
+    selfPr: [{
+      title: '利用者の視点で改善する姿勢',
+      body: '操作する人が迷わないかを確認し、必要に応じて入力項目や表示順を見直します。'
+    }],
+    footer: '以 上',
+    visibility: { ...EMPTY_DATA.visibility }
+  };
+
+  let state = loadState();
+  let saveTimer = null;
+  let lastSavedAt = '';
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+  const escapeHtml = (value = '') => String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+
+  const lines = (value = '') => String(value)
+    .split(/\r?\n/)
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function loadState() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return deepClone(EMPTY_DATA);
+      return normalizeState(JSON.parse(saved));
+    } catch {
+      return deepClone(EMPTY_DATA);
+    }
+  }
+
+  function normalizeState(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('JSONの最上位はオブジェクトにしてください。');
+    const base = deepClone(EMPTY_DATA);
+    const source = migrateState(input);
+    const normalized = {
+      ...base,
+      ...source,
+      schemaVersion: 1,
+      appVersion: typeof source.appVersion === 'string' ? source.appVersion : APP_VERSION,
+      exportedAt: typeof source.exportedAt === 'string' ? source.exportedAt : '',
+      meta: {
+        title: stringValue(source.meta?.title || base.meta.title),
+        date: stringValue(source.meta?.date),
+        name: stringValue(source.meta?.name)
+      },
+      summary: stringValue(source.summary),
+      companies: normalizeCompanies(source.companies),
+      personalProjects: normalizePersonalProjects(source.personalProjects),
+      selfPr: normalizeSelfPr(source.selfPr),
+      skillsText: stringValue(source.skillsText),
+      selfDevelopment: stringValue(source.selfDevelopment),
+      footer: stringValue(source.footer || base.footer),
+      visibility: { ...base.visibility, ...(source.visibility && typeof source.visibility === 'object' ? source.visibility : {}) }
+    };
+    return normalized;
+  }
+
+  function migrateState(input) {
+    let migrated = deepClone(input);
+    const version = Number.isInteger(migrated.schemaVersion) ? migrated.schemaVersion : 0;
+    if (version > 1) throw new Error('このJSONは新しいバージョンのため読み込めません。');
+    if (!migrated.visibility) migrated.visibility = deepClone(EMPTY_DATA.visibility);
+    migrated.schemaVersion = 1;
+    return migrated;
+  }
+
+  function normalizeCompanies(companies) {
+    if (!Array.isArray(companies)) return [];
+    return companies.filter(company => company && typeof company === 'object').map(company => ({
+      name: stringValue(company.name),
+      period: stringValue(company.period),
+      companyMeta: stringValue(company.companyMeta),
+      projects: normalizeProjects(company.projects)
+    }));
+  }
+
+  function normalizeProjects(projects) {
+    if (!Array.isArray(projects)) return [];
+    return projects.filter(project => project && typeof project === 'object').map(project => ({
+      start: stringValue(project.start),
+      end: stringValue(project.end),
+      title: stringValue(project.title),
+      description: stringValue(project.description),
+      phases: stringValue(project.phases),
+      achievements: stringValue(project.achievements),
+      technologies: stringValue(project.technologies),
+      role: stringValue(project.role)
+    }));
+  }
+
+  function normalizePersonalProjects(projects) {
+    if (!Array.isArray(projects)) return [];
+    return projects.filter(project => project && typeof project === 'object').map(project => ({
+      start: stringValue(project.start),
+      end: stringValue(project.end),
+      title: stringValue(project.title),
+      description: stringValue(project.description),
+      technologies: stringValue(project.technologies)
+    }));
+  }
+
+  function normalizeSelfPr(items) {
+    if (!Array.isArray(items)) return [];
+    return items.filter(item => item && typeof item === 'object').map(item => ({
+      title: stringValue(item.title),
+      body: stringValue(item.body)
+    }));
+  }
+
+  function stringValue(value) {
+    if (typeof value === 'string') return value;
+    if (value === null || value === undefined) return '';
+    return String(value);
+  }
+
+  function getByPath(object, path) {
+    return path.split('.').reduce((acc, key) => acc?.[key], object);
+  }
+
+  function setByPath(object, path, value) {
+    const keys = path.split('.');
+    let target = object;
+    keys.slice(0, -1).forEach(key => {
+      if (!(key in target) || typeof target[key] !== 'object' || target[key] === null) target[key] = {};
+      target = target[key];
+    });
+    target[keys[keys.length - 1]] = value;
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    setSaveStatus('保存中…');
+    saveTimer = setTimeout(saveStateNow, 240);
+  }
+
+  function saveStateNow() {
+    clearTimeout(saveTimer);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      lastSavedAt = new Date().toLocaleString('ja-JP');
+      setSaveStatus(`保存済み（${lastSavedAt}）`);
+      return true;
+    } catch {
+      setSaveStatus('保存失敗。JSONでバックアップしてください。');
+      return false;
+    }
+  }
+
+  function setSaveStatus(message) {
+    const status = $('#saveStatus');
+    status.textContent = message;
+    status.setAttribute('aria-label', message);
+  }
+
+  function backupCurrentState(action) {
+    try {
+      localStorage.setItem(BACKUP_KEY, JSON.stringify({ action, backedUpAt: new Date().toISOString(), state }));
+      $('#undoBtn').disabled = false;
+    } catch {
+      setSaveStatus('バックアップ失敗。先にJSONを書き出してください。');
+    }
+  }
+
+  function restoreBackup() {
+    try {
+      const backup = JSON.parse(localStorage.getItem(BACKUP_KEY) || '');
+      state = normalizeState(backup.state);
+      commit({ rebuildEditor: true });
+      $('#undoBtn').disabled = true;
+      localStorage.removeItem(BACKUP_KEY);
+      alert('直前の状態に戻しました。');
+    } catch {
+      alert('元に戻せるデータがありません。');
+    }
+  }
+
+  function commit({ rebuildEditor = false } = {}) {
+    scheduleSave();
+    renderPreview();
+    syncRawJson();
+    if (rebuildEditor) renderEditor();
+  }
+
+  function autoGrow(element) {
+    if (element.tagName !== 'TEXTAREA') return;
+    element.style.height = 'auto';
+    const minimumHeight = element.classList.contains('large-area') ? 140 : 56;
+    element.style.height = `${Math.max(element.scrollHeight, minimumHeight)}px`;
+  }
+
+  function field(label, value, onInput, options = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'field';
+    const labelEl = document.createElement('label');
+    labelEl.textContent = label;
+    const input = options.multiline ? document.createElement('textarea') : document.createElement('input');
+    if (!options.multiline) input.type = 'text';
+    input.value = value ?? '';
+    if (options.multiline) input.className = options.className || '';
+    if (options.placeholder) input.placeholder = options.placeholder;
+    input.autocomplete = 'off';
+    input.addEventListener('input', event => {
+      autoGrow(event.target);
+      onInput(event.target.value);
+    });
+    autoGrow(input);
+    wrapper.append(labelEl, input);
+    return wrapper;
+  }
+
+  function actionButton(text, className, handler) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    button.className = className;
+    button.addEventListener('click', handler);
+    return button;
+  }
+
+  function moveItem(array, from, to) {
+    if (to < 0 || to >= array.length) return;
+    const [item] = array.splice(from, 1);
+    array.splice(to, 0, item);
+  }
+
+  function renderEditor() {
+    $$('[data-path]').forEach(element => {
+      element.value = getByPath(state, element.dataset.path) ?? '';
+      autoGrow(element);
+      if (!element.dataset.bound) {
+        element.dataset.bound = '1';
+        element.addEventListener('input', event => {
+          autoGrow(event.target);
+          setByPath(state, element.dataset.path, event.target.value);
+          commit();
+        });
+      }
+    });
+
+    $$('[data-visibility]').forEach(element => {
+      const key = element.dataset.visibility;
+      element.checked = state.visibility[key] !== false;
+      if (!element.dataset.bound) {
+        element.dataset.bound = '1';
+        element.addEventListener('change', event => {
+          state.visibility[key] = event.target.checked;
+          commit();
+        });
+      }
+    });
+
+    renderCompaniesEditor();
+    renderPersonalProjectsEditor();
+    renderSelfPrEditor();
+    syncRawJson();
+    restorePanelState();
+  }
+
+  function restorePanelState() {
+    let savedPanels = {};
+    try {
+      savedPanels = JSON.parse(localStorage.getItem('resume_pdf_editor_panels_v1') || '{}');
+    } catch {
+      savedPanels = {};
+    }
+    $$('details.panel[data-panel-key]').forEach(panel => {
+      const key = panel.dataset.panelKey;
+      if (typeof savedPanels[key] === 'boolean') panel.open = savedPanels[key];
+      if (!panel.dataset.panelBound) {
+        panel.dataset.panelBound = '1';
+        panel.addEventListener('toggle', () => {
+          savedPanels[key] = panel.open;
+          try {
+            localStorage.setItem('resume_pdf_editor_panels_v1', JSON.stringify(savedPanels));
+          } catch { /* 保存できない環境ではUI状態を保持しない */ }
+        });
+      }
+    });
+  }
+
+  function renderCompaniesEditor() {
+    const root = $('#companiesEditor');
+    root.innerHTML = '';
+
+    state.companies.forEach((company, companyIndex) => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      const head = document.createElement('div');
+      head.className = 'item-head';
+      const title = document.createElement('div');
+      title.className = 'item-title';
+      title.textContent = `会社 ${companyIndex + 1}`;
+      head.append(
+        title,
+        actionButton('↑', 'btn small', () => { moveItem(state.companies, companyIndex, companyIndex - 1); commit({ rebuildEditor: true }); }),
+        actionButton('↓', 'btn small', () => { moveItem(state.companies, companyIndex, companyIndex + 1); commit({ rebuildEditor: true }); }),
+        actionButton('複製', 'btn small', () => { state.companies.splice(companyIndex + 1, 0, deepClone(company)); commit({ rebuildEditor: true }); }),
+        actionButton('削除', 'btn small danger', () => {
+          if (confirm('この会社情報を削除しますか？')) {
+            state.companies.splice(companyIndex, 1);
+            commit({ rebuildEditor: true });
+          }
+        })
+      );
+      card.append(head);
+      card.append(
+        field('会社名', company.name, v => { company.name = v; commit(); }),
+        field('在籍期間', company.period, v => { company.period = v; commit(); }),
+        field('会社情報', company.companyMeta, v => { company.companyMeta = v; commit(); }, { multiline: true, className: 'small-area' })
+      );
+
+      const projectRoot = document.createElement('div');
+      company.projects = Array.isArray(company.projects) ? company.projects : [];
+      company.projects.forEach((project, projectIndex) => {
+        const projectCard = document.createElement('div');
+        projectCard.className = 'item-card';
+        projectCard.style.background = '#fff';
+        const projectHead = document.createElement('div');
+        projectHead.className = 'item-head';
+        const projectTitle = document.createElement('div');
+        projectTitle.className = 'item-title';
+        projectTitle.textContent = `案件 ${projectIndex + 1}`;
+        projectHead.append(
+          projectTitle,
+          actionButton('↑', 'btn small', () => { moveItem(company.projects, projectIndex, projectIndex - 1); commit({ rebuildEditor: true }); }),
+          actionButton('↓', 'btn small', () => { moveItem(company.projects, projectIndex, projectIndex + 1); commit({ rebuildEditor: true }); }),
+          actionButton('複製', 'btn small', () => { company.projects.splice(projectIndex + 1, 0, deepClone(project)); commit({ rebuildEditor: true }); }),
+          actionButton('削除', 'btn small danger', () => {
+            if (confirm('この案件を削除しますか？')) {
+              company.projects.splice(projectIndex, 1);
+              commit({ rebuildEditor: true });
+            }
+          })
+        );
+        projectCard.append(projectHead);
+
+        const periodGrid = document.createElement('div');
+        periodGrid.className = 'grid-2';
+        periodGrid.append(
+          field('開始', project.start, v => { project.start = v; commit(); }),
+          field('終了', project.end, v => { project.end = v; commit(); })
+        );
+        projectCard.append(
+          periodGrid,
+          field('案件名・職種', project.title, v => { project.title = v; commit(); }),
+          field('業務内容（1行につき1項目）', project.description, v => { project.description = v; commit(); }, { multiline: true, className: 'large-area' }),
+          field('担当フェーズ', project.phases, v => { project.phases = v; commit(); }, { multiline: true, className: 'small-area' }),
+          field('実績（1行につき1項目）', project.achievements, v => { project.achievements = v; commit(); }, { multiline: true }),
+          field('開発環境（1行につき1項目）', project.technologies, v => { project.technologies = v; commit(); }, { multiline: true }),
+          field('役割・体制', project.role, v => { project.role = v; commit(); }, { multiline: true, className: 'small-area' })
+        );
+        projectRoot.append(projectCard);
+      });
+
+      const addProjectRow = document.createElement('div');
+      addProjectRow.className = 'add-row';
+      addProjectRow.append(actionButton('案件を追加', 'btn small primary', () => {
+        company.projects.push({ start: '', end: '', title: '', description: '', phases: '', achievements: '', technologies: '', role: '' });
+        commit({ rebuildEditor: true });
+      }));
+      card.append(projectRoot, addProjectRow);
+      root.append(card);
+    });
+  }
+
+  function renderPersonalProjectsEditor() {
+    const root = $('#personalProjectsEditor');
+    root.innerHTML = '';
+    state.personalProjects.forEach((project, index) => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      const head = document.createElement('div');
+      head.className = 'item-head';
+      const title = document.createElement('div');
+      title.className = 'item-title';
+      title.textContent = `個人開発・副業 ${index + 1}`;
+      head.append(
+        title,
+        actionButton('↑', 'btn small', () => { moveItem(state.personalProjects, index, index - 1); commit({ rebuildEditor: true }); }),
+        actionButton('↓', 'btn small', () => { moveItem(state.personalProjects, index, index + 1); commit({ rebuildEditor: true }); }),
+        actionButton('複製', 'btn small', () => { state.personalProjects.splice(index + 1, 0, deepClone(project)); commit({ rebuildEditor: true }); }),
+        actionButton('削除', 'btn small danger', () => {
+          if (confirm('この項目を削除しますか？')) {
+            state.personalProjects.splice(index, 1);
+            commit({ rebuildEditor: true });
+          }
+        })
+      );
+      const periodGrid = document.createElement('div');
+      periodGrid.className = 'grid-2';
+      periodGrid.append(
+        field('開始', project.start, v => { project.start = v; commit(); }),
+        field('終了', project.end, v => { project.end = v; commit(); })
+      );
+      card.append(
+        head,
+        periodGrid,
+        field('見出し', project.title, v => { project.title = v; commit(); }),
+        field('業務内容', project.description, v => { project.description = v; commit(); }, { multiline: true, className: 'large-area' }),
+        field('開発環境（1行につき1項目）', project.technologies, v => { project.technologies = v; commit(); }, { multiline: true })
+      );
+      root.append(card);
+    });
+  }
+
+  function renderSelfPrEditor() {
+    const root = $('#selfPrEditor');
+    root.innerHTML = '';
+    state.selfPr.forEach((item, index) => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      const head = document.createElement('div');
+      head.className = 'item-head';
+      const title = document.createElement('div');
+      title.className = 'item-title';
+      title.textContent = `自己PR ${index + 1}`;
+      head.append(
+        title,
+        actionButton('↑', 'btn small', () => { moveItem(state.selfPr, index, index - 1); commit({ rebuildEditor: true }); }),
+        actionButton('↓', 'btn small', () => { moveItem(state.selfPr, index, index + 1); commit({ rebuildEditor: true }); }),
+        actionButton('複製', 'btn small', () => { state.selfPr.splice(index + 1, 0, deepClone(item)); commit({ rebuildEditor: true }); }),
+        actionButton('削除', 'btn small danger', () => {
+          if (confirm('この自己PR項目を削除しますか？')) {
+            state.selfPr.splice(index, 1);
+            commit({ rebuildEditor: true });
+          }
+        })
+      );
+      card.append(
+        head,
+        field('見出し', item.title, v => { item.title = v; commit(); }),
+        field('本文', item.body, v => { item.body = v; commit(); }, { multiline: true, className: 'large-area' })
+      );
+      root.append(card);
+    });
+  }
+
+  function renderBulletLines(value) {
+    const items = lines(value);
+    if (!items.length) return '';
+    return items.map(item => `<span class="bullet-line">${escapeHtml(item)}</span>`).join('');
+  }
+
+  function renderProjectContent(project) {
+    const description = renderBulletLines(project.description);
+    const phases = project.phases?.trim()
+      ? `<div class="sub-label">【担当フェーズ】</div><div>${escapeHtml(project.phases)}</div>`
+      : '';
+    const achievements = lines(project.achievements).length
+      ? `<div class="sub-label">【実績】</div>${renderBulletLines(project.achievements)}`
+      : '';
+    return `
+      <div class="job-title">${escapeHtml(project.title)}</div>
+      ${description ? `<div class="sub-label">【業務内容】</div>${description}` : ''}
+      ${phases}
+      ${achievements}
+    `;
+  }
+
+  function renderCompanies() {
+    if (!state.companies.length) return '<p class="empty-note">職務経歴が未登録です。</p>';
+    return state.companies.map(company => `
+      <section class="company">
+        <div class="company-heading">${escapeHtml(company.name)}（${escapeHtml(company.period)}）</div>
+        <div class="company-meta">${escapeHtml(company.companyMeta)}</div>
+        <table class="experience-table">
+          <thead>
+            <tr>
+              <th class="period-col">期間／西暦</th>
+              <th class="content-col">業務内容</th>
+              <th class="tech-col">開発環境等</th>
+              <th class="role-col">役割等</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(company.projects || []).map(project => `
+              <tr>
+                <td class="period-cell">${escapeHtml(project.start)}<br>〜<br>${escapeHtml(project.end)}</td>
+                <td>${renderProjectContent(project)}</td>
+                <td>${escapeHtml(project.technologies)}</td>
+                <td>${escapeHtml(project.role)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </section>
+    `).join('');
+  }
+
+  function renderPersonalProjects() {
+    if (!state.personalProjects.length) return '';
+    return `
+      <section class="resume-section">
+        <h2 class="resume-section-title">個人開発</h2>
+        <table class="personal-table">
+          <thead><tr><th class="period-col">期間／西暦</th><th class="content-col">業務内容</th><th class="tech-col">開発環境等</th></tr></thead>
+          <tbody>
+          ${state.personalProjects.map(project => `
+            <tr>
+              <td class="period-cell">${escapeHtml(project.start)}<br>〜<br>${escapeHtml(project.end)}</td>
+              <td>
+                <div class="job-title">${escapeHtml(project.title)}</div>
+                <div class="sub-label">【業務内容】</div>
+                <div>${escapeHtml(project.description)}</div>
+              </td>
+              <td>${escapeHtml(project.technologies)}</td>
+            </tr>
+          `).join('')}
+          </tbody>
+        </table>
+      </section>
+    `;
+  }
+
+  function renderPreview() {
+    const preview = $('#resumePreview');
+    const skillItems = lines(state.skillsText);
+    const summaryMarkup = state.visibility.summary && state.summary.trim()
+      ? `<section class="resume-section"><h2 class="resume-section-title">職務経歴要約</h2><p class="resume-paragraph">${escapeHtml(state.summary)}</p></section>`
+      : '';
+    const companiesMarkup = state.visibility.companies
+      ? `<section class="resume-section"><h2 class="resume-section-title">職務経歴</h2>${renderCompanies()}</section>`
+      : '';
+    const skillsMarkup = state.visibility.skills && skillItems.length
+      ? `<section class="resume-section"><h2 class="resume-section-title">得意分野・活かせる知識</h2><ul class="simple-list">${skillItems.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></section>`
+      : '';
+    const selfDevelopmentMarkup = state.visibility.selfDevelopment && state.selfDevelopment.trim()
+      ? `<section class="resume-section"><h2 class="resume-section-title">自己研鑽</h2><p class="resume-paragraph">${escapeHtml(state.selfDevelopment)}</p></section>`
+      : '';
+    const selfPrMarkup = state.visibility.selfPr && state.selfPr.length
+      ? `<section class="resume-section"><h2 class="resume-section-title">自己PR</h2>${state.selfPr.map(item => `
+          <div class="pr-item">
+            <div class="pr-heading">${escapeHtml(item.title)}</div>
+            <p class="pr-body">${escapeHtml(item.body)}</p>
+          </div>`).join('')}<div class="end-mark">${escapeHtml(state.footer || '以 上')}</div></section>`
+      : '';
+    preview.innerHTML = `
+      <h1 class="resume-title">${escapeHtml(state.meta.title)}</h1>
+      <div class="resume-meta">${state.meta.date.trim() ? `${escapeHtml(state.meta.date)} 現在<br>` : ''}${state.meta.name.trim() ? `名前：${escapeHtml(state.meta.name)}` : ''}</div>
+      ${summaryMarkup}
+      ${companiesMarkup}
+      ${state.visibility.personalProjects ? renderPersonalProjects() : ''}
+      ${skillsMarkup}
+      ${selfDevelopmentMarkup}
+      ${selfPrMarkup}
+    `;
+    requestAnimationFrame(updatePreviewScale);
+  }
+
+  function updatePreviewScale() {
+    const pane = $('#previewPane');
+    const available = Math.max(320, pane.clientWidth - 56);
+    const a4Px = 210 / 25.4 * 96;
+    const scale = Math.min(1, available / a4Px);
+    document.documentElement.style.setProperty('--preview-scale', String(scale));
+    const doc = $('#resumePreview');
+    $('#documentStage').style.height = `${doc.scrollHeight * scale}px`;
+    const warning = $('#layoutWarning');
+    const estimatedPages = Math.max(1, Math.ceil(doc.scrollHeight / (297 / 25.4 * 96)));
+    const hasHorizontalOverflow = doc.scrollWidth > doc.clientWidth + 1;
+    if (hasHorizontalOverflow) {
+      warning.hidden = false;
+      warning.textContent = 'A4横幅から内容がはみ出しています。長い文字列や表の内容を短くしてください。';
+    } else if (estimatedPages >= 3) {
+      warning.hidden = false;
+      warning.textContent = `推定${estimatedPages}ページです。文章量が多いため、印刷時のページ分割を確認してください。`;
+    } else {
+      warning.hidden = true;
+      warning.textContent = '';
+    }
+    const chip = $('.preview-toolbar .chip');
+    chip.textContent = `A4プレビュー・推定${estimatedPages}ページ`;
+  }
+
+  function syncRawJson() {
+    const raw = $('#rawJson');
+    if (document.activeElement !== raw) raw.value = JSON.stringify(state, null, 2);
+  }
+
+  function exportJson() {
+    const exportState = deepClone(state);
+    exportState.schemaVersion = 1;
+    exportState.appVersion = APP_VERSION;
+    exportState.exportedAt = new Date().toISOString();
+    const blob = new Blob([JSON.stringify(exportState, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `resume-data_${new Date().toISOString().slice(0, 10)}.private.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importJsonFile(file) {
+    if (file.size > MAX_IMPORT_BYTES) {
+      alert('JSONファイルが大きすぎます。1MB以下のファイルを選択してください。');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const importedState = normalizeState(JSON.parse(String(reader.result)));
+        if (!confirm('現在の入力をバックアップして、このJSONを読み込みますか？')) return;
+        backupCurrentState('import');
+        state = importedState;
+        commit({ rebuildEditor: true });
+        alert('JSONを読み込みました。');
+      } catch {
+        alert('JSONを読み込めませんでした。形式と必須項目を確認してください。');
+      }
+    };
+    reader.onerror = () => alert('JSONファイルを読み込めませんでした。');
+    reader.readAsText(file, 'utf-8');
+  }
+
+  $('#addCompanyBtn').addEventListener('click', () => {
+    state.companies.push({ name: '', period: '', companyMeta: '', projects: [] });
+    commit({ rebuildEditor: true });
+  });
+
+  $('#addPersonalProjectBtn').addEventListener('click', () => {
+    state.personalProjects.push({ start: '', end: '', title: '', description: '', technologies: '' });
+    commit({ rebuildEditor: true });
+  });
+
+  $('#addSelfPrBtn').addEventListener('click', () => {
+    state.selfPr.push({ title: '', body: '' });
+    commit({ rebuildEditor: true });
+  });
+
+  $('#printBtn').addEventListener('click', () => {
+    if (!saveStateNow()) {
+      alert('印刷前の保存に失敗しました。JSONを書き出してから再試行してください。');
+      return;
+    }
+    document.title = '職務経歴書';
+    window.print();
+  });
+
+  $('#exportJsonBtn').addEventListener('click', () => {
+    exportJson();
+    setSaveStatus('JSONを書き出しました。個人情報の取り扱いに注意してください。');
+  });
+  $('#importJsonBtn').addEventListener('click', () => $('#importFile').click());
+  $('#importFile').addEventListener('change', event => {
+    const file = event.target.files?.[0];
+    if (file) importJsonFile(file);
+    event.target.value = '';
+  });
+
+  $('#copyJsonBtn').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(state, null, 2));
+      $('#copyJsonBtn').textContent = 'コピー済み';
+      setTimeout(() => $('#copyJsonBtn').textContent = 'コピー', 1000);
+    } catch {
+      alert('クリップボードへコピーできませんでした。');
+    }
+  });
+
+  $('#applyJsonBtn').addEventListener('click', () => {
+    try {
+      const nextState = normalizeState(JSON.parse($('#rawJson').value));
+      if (!confirm('現在の入力をバックアップして、編集したJSONを反映しますか？')) return;
+      backupCurrentState('json-edit');
+      state = nextState;
+      commit({ rebuildEditor: true });
+      alert('JSONを反映しました。');
+    } catch {
+      alert('JSON形式を確認してください。現在の入力は変更していません。');
+    }
+  });
+
+  $('#resetBtn').addEventListener('click', () => {
+    if (!confirm('現在の入力をバックアップして、空の状態に初期化しますか？')) return;
+    backupCurrentState('reset');
+    state = deepClone(EMPTY_DATA);
+    commit({ rebuildEditor: true });
+  });
+
+  $('#newBtn').addEventListener('click', () => $('#resetBtn').click());
+  $('#sampleBtn').addEventListener('click', () => {
+    if (!confirm('現在の入力をバックアップして、匿名サンプルを読み込みますか？')) return;
+    backupCurrentState('sample');
+    state = normalizeState(SAMPLE_DATA);
+    commit({ rebuildEditor: true });
+  });
+  $('#undoBtn').addEventListener('click', restoreBackup);
+  $('#deleteStorageBtn').addEventListener('click', () => {
+    if (!confirm('この端末に保存した入力・バックアップを削除しますか？この操作は元に戻せません。')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(BACKUP_KEY);
+    state = deepClone(EMPTY_DATA);
+    $('#undoBtn').disabled = true;
+    commit({ rebuildEditor: true });
+    setSaveStatus('この端末の保存データを削除しました。');
+  });
+
+  $('#privacyBtn').addEventListener('click', () => $('#privacyDialog').showModal());
+  $('#privacyCloseBtn').addEventListener('click', () => $('#privacyDialog').close());
+
+  function chooseWelcome(action) {
+    localStorage.setItem(ONBOARDING_KEY, '1');
+    $('#welcomeDialog').close();
+    if (action === 'sample') $('#sampleBtn').click();
+    if (action === 'import') $('#importJsonBtn').click();
+  }
+
+  $('#welcomeEmptyBtn').addEventListener('click', () => chooseWelcome('empty'));
+  $('#welcomeSampleBtn').addEventListener('click', () => chooseWelcome('sample'));
+  $('#welcomeImportBtn').addEventListener('click', () => chooseWelcome('import'));
+
+  function setMobileView(view) {
+    const workspace = $('.workspace');
+    workspace.classList.toggle('mobile-input', view === 'input');
+    workspace.classList.toggle('mobile-preview', view === 'preview');
+    $('#inputTabBtn').setAttribute('aria-selected', String(view === 'input'));
+    $('#previewTabBtn').setAttribute('aria-selected', String(view === 'preview'));
+  }
+
+  $('#inputTabBtn').addEventListener('click', () => setMobileView('input'));
+  $('#previewTabBtn').addEventListener('click', () => setMobileView('preview'));
+
+  $('#densitySelect').value = localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'standard';
+  function applyDensity() {
+    const compact = $('#densitySelect').value === 'compact';
+    document.body.classList.toggle('density-compact', compact);
+    try { localStorage.setItem(DENSITY_KEY, $('#densitySelect').value); } catch { /* 保存できない環境では標準設定を使う */ }
+    updatePreviewScale();
+  }
+  $('#densitySelect').addEventListener('change', applyDensity);
+
+  window.addEventListener('resize', updatePreviewScale);
+  if ('ResizeObserver' in window) new ResizeObserver(updatePreviewScale).observe($('#previewPane'));
+
+  renderEditor();
+  renderPreview();
+  applyDensity();
+  $('#undoBtn').disabled = !localStorage.getItem(BACKUP_KEY);
+  scheduleSave();
+  if (!localStorage.getItem(ONBOARDING_KEY) && !localStorage.getItem(STORAGE_KEY)) {
+    $('#welcomeDialog').showModal();
+  }
+})();
+</script>
+</body>
+</html>
