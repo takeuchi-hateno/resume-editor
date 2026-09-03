@@ -22,36 +22,22 @@ jobs:
           path = Path('resume_pdf_editor.html')
           text = path.read_text(encoding='utf-8')
 
-          old = """  $('#printBtn').addEventListener('click', () => {
-            if (!saveStateNow()) {
-              alert('印刷前の保存に失敗しました。JSONを書き出してから再試行してください。');
-              return;
-            }
-            document.title = '職務経歴書';
-            window.print();
-          });"""
-
-          new = """  $('#printBtn').addEventListener('click', () => {
-            if (!saveStateNow()) {
-              alert('印刷前の保存に失敗しました。JSONを書き出してから再試行してください。');
-              return;
-            }
-            const now = new Date();
-            const ymd = [
-              now.getFullYear(),
-              String(now.getMonth() + 1).padStart(2, '0'),
-              String(now.getDate()).padStart(2, '0')
-            ].join('');
-            const originalTitle = document.title;
-            document.title = `職務経歴書_${ymd}`;
-            window.addEventListener('afterprint', () => {
-              document.title = originalTitle;
-            }, { once: true });
-            window.print();
-          });"""
+          old = "    document.title = '職務経歴書';\n    window.print();"
+          new = """    const now = new Date();
+              const ymd = [
+                now.getFullYear(),
+                String(now.getMonth() + 1).padStart(2, '0'),
+                String(now.getDate()).padStart(2, '0')
+              ].join('');
+              const originalTitle = document.title;
+              document.title = `職務経歴書_${ymd}`;
+              window.addEventListener('afterprint', () => {
+                document.title = originalTitle;
+              }, { once: true });
+              window.print();"""
 
           if old not in text:
-              print('Target block is already patched or was not found.')
+              print('Target lines are already patched or were not found.')
           else:
               path.write_text(text.replace(old, new, 1), encoding='utf-8')
               print('Patched resume_pdf_editor.html')
