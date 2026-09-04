@@ -348,7 +348,8 @@
     .experience-table .role-col { width: 16%; }
 
     .period-cell { text-align: center; line-height: 1.55; }
-    .job-title { font-weight: 700; margin-bottom: 3mm; }
+    .job-title { font-weight: 700; margin-bottom: 0; break-after: avoid; }
+    .job-title + .sub-label { margin-top: .7mm; }
     .job-title::before { content: "■"; margin-right: .15em; }
     .sub-label { margin-top: 2.5mm; font-weight: 700; }
     .bullet-line { display: block; padding-left: .7em; text-indent: -.7em; }
@@ -434,7 +435,8 @@
       .experience-table, .personal-table { font-size: 8.55pt; line-height: 1.28; }
       .experience-table th, .experience-table td, .personal-table th, .personal-table td { padding: 1.1mm 1.35mm; }
       .experience-table tr, .personal-table tr { break-inside: auto; }
-      .job-title { margin-bottom: 2mm; }
+      .job-title { margin-bottom: 0; break-after: avoid; }
+      .job-title + .sub-label { margin-top: .6mm; }
       .sub-label { margin-top: 1.8mm; }
       .pr-item { break-inside: auto; margin-bottom: 3mm; }
       .density-compact .resume-document { font-size: 8.9pt; line-height: 1.22; }
