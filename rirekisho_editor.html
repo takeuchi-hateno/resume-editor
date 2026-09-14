@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <title>履歴書 PDF生成ツール</title>
   <style>
@@ -54,46 +54,82 @@
     .privacy-note { background:#fff7df; border:1px solid #efd58d; color:#604b0b; }
     .warning { background:#fff0f0; border:1px solid #e4a4a4; color:#8a2424; }
     .warning[hidden] { display:none; }
-    .document-stage { width:calc(210mm * var(--preview-scale)); margin:0 auto 40px; }
-    .resume-sheet { position:relative; width:210mm; min-height:297mm; padding:12mm 13mm 12mm; margin:0 0 16px; background:#fff; color:#111; box-shadow:0 6px 25px rgba(0,0,0,.24); transform:scale(var(--preview-scale)); transform-origin:top left; font-family:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",serif; font-size:9.4pt; line-height:1.35; }
-    .resume-sheet + .resume-sheet { margin-top:calc(-297mm * (1 - var(--preview-scale)) + 16px); }
-    .rirekisho-title { margin:0 0 3mm; text-align:center; font-size:20pt; letter-spacing:.45em; }
-    .date-line { margin:0 0 2mm; text-align:right; }
-    .basic-grid { display:grid; grid-template-columns:1fr 32mm; gap:2mm; }
-    .resume-table { width:100%; border-collapse:collapse; table-layout:fixed; }
-    .resume-table th,.resume-table td { border:.6pt solid #222; padding:1.5mm 1.8mm; vertical-align:middle; }
-    .resume-table th { width:27mm; background:#fafafa; text-align:left; font-weight:400; }
-    .name-kana { font-size:9pt; }
-    .name-main { font-size:18pt; letter-spacing:.08em; min-height:14mm; }
-    .photo-box { width:30mm; height:40mm; margin:0 auto; border:.6pt solid #222; display:flex; align-items:center; justify-content:center; overflow:hidden; color:#777; font-size:8pt; text-align:center; }
+
+    .document-stage { margin:0 auto; width:max-content; max-width:100%; }
+    .page-frame { position:relative; margin:0 auto 24px; }
+    .resume-sheet { position:absolute; top:0; left:0; width:210mm; height:297mm; padding:25mm 15mm 15mm 19.5mm; background:#fff; color:#111; box-shadow:0 6px 25px #0003; transform:scale(var(--preview-scale)); transform-origin:top left; font-family:"ＭＳ 明朝","MS Mincho","Yu Mincho","Hiragino Mincho ProN",serif; font-size:12pt; line-height:1.35; }
+    .page-frame:not(:first-child) .resume-sheet { padding-left:14.75mm; }
+    .sheet-content { position:relative; width:147.64mm; height:257mm; }
+    .sheet-title { position:absolute; top:7.94mm; left:0; margin:0; font-size:20pt; font-weight:700; letter-spacing:.24em; }
+    .sheet-date { position:absolute; top:10.58mm; right:33.3mm; margin:0; font-size:10pt; }
+    .identity { position:absolute; top:18.52mm; left:0; width:114.3mm; height:34.4mm; border:.5mm solid #111; }
+    .identity-kana { display:grid; grid-template-columns:19.05mm 66.675mm 1fr; height:5.29mm; border-bottom:.2mm solid; align-items:center; }
+    .label { font-size:9pt; font-weight:400; padding:0 1mm; }
+    .kana-value { font-size:12pt; font-weight:600; }
+    .identity-name { height:18.52mm; position:relative; padding:1mm; border-bottom:.2mm solid; }
+    .name-main { display:block; font-size:20pt; font-weight:600; padding-top:1.1mm; }
+    .seal { position:absolute; top:0; right:0; width:28.575mm; height:18.52mm; border-left:.2mm solid; font-size:9pt; padding:1mm; }
+    .birth-row { display:flex; gap:3mm; align-items:center; height:10mm; }
+    .birth-row .label:first-child { align-self:stretch; width:19.05mm; display:flex; align-items:center; border-right:.2mm solid; }
+    .birth-value { flex:1; text-align:center; font-weight:600; }
+    .photo-box { position:absolute; top:10.58mm; right:0; width:28.575mm; height:39.69mm; border:.2mm dashed #555; display:flex; justify-content:center; align-items:center; text-align:center; font-size:9pt; overflow:hidden; }
     .photo-box img { width:100%; height:100%; object-fit:cover; }
-    .section-title { margin:4mm 0 1mm; padding-bottom:.8mm; border-bottom:1.2pt solid #222; font-size:11.5pt; }
-    .history-table th { background:#fafafa; text-align:center; font-weight:400; }
-    .history-table .year { width:16mm; text-align:center; }
-    .history-table .month { width:12mm; text-align:center; }
-    .history-table .text { width:auto; }
-    .history-heading td { text-align:center; font-weight:700; }
-    .history-end { text-align:right; padding-right:8mm !important; }
-    .text-box { min-height:46mm; border:.6pt solid #222; padding:2.5mm; white-space:pre-wrap; }
-    .text-box.preferences { min-height:28mm; }
-    .license-table .year { width:16mm; text-align:center; }
-    .license-table .month { width:12mm; text-align:center; }
-    .license-table th { background:#fafafa; font-weight:400; }
-    .sheet-footer { position:absolute; left:13mm; right:13mm; bottom:8mm; text-align:right; font-size:8pt; color:#555; }
-    @page { size:A4; margin:0; }
+    .contact-box { position:absolute; top:52.92mm; width:147.64mm; height:21.17mm; display:grid; grid-template-columns:114.3mm 1fr; border:.5mm solid #111; border-top:.2mm solid; }
+    .address-area { border-right:.2mm solid; }
+    .address-kana { display:flex; align-items:center; height:5.29mm; border-bottom:.2mm dotted #555; }
+    .address-kana .label { width:19.05mm; flex-shrink:0; }
+    .address-kana .value { font-size:9pt; }
+    .address-post { display:flex; align-items:center; height:5.29mm; }
+    .address-post .label { width:19.05mm; }
+    .address-value { font-size:10pt; font-weight:600; padding:0 1mm; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.3; }
+    .contact-small { height:10.58mm; }
+    .contact-small + .contact-small { border-top:.2mm solid; }
+    .contact-value { display:block; text-align:center; font-family:Arial,"Hiragino Kaku Gothic ProN",sans-serif; font-size:7pt; padding:.6mm; overflow-wrap:anywhere; }
+    .resume-table { width:100%; border-collapse:collapse; table-layout:fixed; border:.5mm solid #111; font-size:12pt; }
+    .resume-table th,.resume-table td { border:.2mm solid #111; padding:0 1mm; vertical-align:middle; font-weight:400; overflow-wrap:anywhere; white-space:pre-wrap; }
+    .resume-table thead tr { height:5.29mm; }
+    .resume-table th { font-size:9pt; text-align:center; }
+    .resume-table tbody tr { height:7.9375mm; }
+    .resume-table .year { width:19.05mm; text-align:center; }
+    .resume-table .month { width:9.525mm; text-align:center; }
+    .history-heading td:last-child { text-align:center; font-weight:600; letter-spacing:1em; }
+    .history-end { text-align:right; }
+    .history-first { position:absolute; top:82.02mm; width:100%; }
+    .history-continuation { position:absolute; top:18.52mm; width:100%; }
+    .licenses-block { position:absolute; top:71.44mm; width:100%; }
+    .form-box { border:.5mm solid #111; position:absolute; width:100%; padding:1mm; }
+    .form-box h2 { font-size:9pt; font-weight:400; margin:0 0 1mm; }
+    .box-body { white-space:pre-wrap; overflow-wrap:anywhere; padding:1mm; font-size:10pt; }
+    .other-notes { top:140.23mm; height:15.88mm; border-top:0; }
+    .hobbies-box { top:161.4mm; height:44.98mm; }
+    .remarks-box { top:211.67mm; height:34.4mm; }
+    .gender-note { position:absolute; top:246.06mm; margin:1mm 0 0; font-size:9pt; }
+    .extra-content { padding-top:18.52mm; }
+    .extra-content h2 { font-size:12pt; font-weight:500; }
+    .extra-box { border:.5mm solid; padding:3mm; margin-bottom:6mm; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .preview-toolbar { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:16px; }
+    .preview-toolbar select { width:auto; }
+    :focus-visible { outline:3px solid #275efe; outline-offset:2px; }
+    input:focus-visible,textarea:focus-visible,select:focus-visible { outline:3px solid #275efe; }
+    @page { size:A4 portrait; margin:0; }
     @media print {
       html,body { background:#fff !important; }
-      .topbar,.editor-pane,.privacy-note,.warning,.data-note { display:none !important; }
+      .topbar,.editor-pane,.preview-toolbar,.privacy-note,.warning,.data-note { display:none !important; }
       .app,.workspace,.preview-pane,.document-stage { display:block !important; width:auto !important; height:auto !important; min-height:0 !important; margin:0 !important; padding:0 !important; overflow:visible !important; background:#fff !important; }
-      .resume-sheet { width:210mm !important; height:297mm !important; min-height:297mm !important; margin:0 !important; padding:12mm 13mm !important; box-shadow:none !important; transform:none !important; page-break-after:always; break-after:page; }
-      .resume-sheet:last-child { page-break-after:auto; break-after:auto; }
+      .page-frame { width:210mm !important; height:297mm !important; margin:0 !important; break-after:page; }
+      .page-frame:last-child { break-after:auto; }
+      .resume-sheet { position:relative; transform:none !important; box-shadow:none; print-color-adjust:exact; }
+      .resume-table tr { break-inside:avoid; }
     }
     @media (max-width:980px) {
       .app { height:auto; overflow:visible; }
       .topbar { align-items:flex-start; flex-wrap:wrap; }
       .topbar h1 { width:100%; }
-      .workspace { grid-template-columns:1fr; }
-      .editor-pane,.preview-pane { overflow:visible; }
+      .workspace { grid-template-columns:minmax(0,1fr); }
+      .editor-pane { overflow:visible; }
+      .preview-pane { overflow:auto; padding:12px; }
+      .grid-3 { grid-template-columns:1fr 1fr; }
+      .grid-3 .field:last-child { grid-column:1 / -1; }
     }
   </style>
 </head>
@@ -101,7 +137,7 @@
 <div class="app">
   <header class="topbar">
     <h1>履歴書 PDF生成ツール</h1>
-    <span id="saveStatus" class="save-status">保存準備中</span>
+    <span id="saveStatus" class="save-status" aria-live="polite">保存準備中</span>
     <div class="actions">
       <a class="btn dark" href="resume_pdf_editor.html">職務経歴書へ</a>
       <button id="importCareerBtn" class="btn dark" type="button">職務経歴書から職歴を取込</button>
@@ -142,6 +178,7 @@
         <summary>連絡先</summary>
         <div class="panel-body">
           <div class="field"><label>郵便番号</label><input type="text" data-path="contact.postalCode" placeholder="123-4567"></div>
+          <div class="field"><label>住所のフリガナ</label><input type="text" data-path="contact.addressKana"></div>
           <div class="field"><label>住所</label><textarea data-path="contact.address"></textarea></div>
           <div class="grid-2">
             <div class="field"><label>電話番号</label><input type="tel" data-path="contact.phone"></div>
@@ -161,20 +198,29 @@
       </details>
 
       <details class="panel">
-        <summary>免許・資格</summary>
+        <summary>資格・語学</summary>
         <div class="panel-body"><div id="licensesEditor"></div><div class="add-row"><button id="addLicenseBtn" class="btn small primary" type="button">資格を追加</button></div></div>
       </details>
 
       <details class="panel" open>
-        <summary>志望動機・自己PR</summary>
-        <div class="panel-body"><div class="field"><label>本文</label><textarea class="large" data-path="motivation"></textarea></div></div>
+        <summary>趣味・スポーツ・特技・好きな学科など</summary>
+        <div class="panel-body"><div class="field"><label>本文</label><textarea class="large" data-path="hobbies"></textarea></div></div>
       </details>
 
       <details class="panel">
-        <summary>本人希望記入欄</summary>
-        <div class="panel-body"><div class="field"><label>本文</label><textarea data-path="preferences" placeholder="特になし、または希望事項"></textarea></div></div>
+        <summary>備考・その他特記事項</summary>
+        <div class="panel-body"><div class="field"><label>本文</label><textarea data-path="remarks"></textarea></div><div class="field"><label>その他特記すべき事項</label><textarea data-path="otherNotes"></textarea></div></div>
       </details>
 
+      <details class="panel">
+        <summary>旧形式の追加項目・レイアウト</summary>
+        <div class="panel-body">
+          <p class="hint">旧JSONの志望動機と本人希望は保持し、入力がある場合のみ追加ページへ出力します。</p>
+          <div class="field"><label>志望動機・自己PR</label><textarea data-path="motivation"></textarea></div>
+          <div class="field"><label>本人希望記入欄</label><textarea data-path="preferences"></textarea></div>
+          <div class="field"><label>学歴と職歴の間の空行数 (0〜6)</label><input type="number" min="0" max="6" data-path="layout.educationBlankRows"></div>
+        </div>
+      </details>
       <details class="panel">
         <summary>JSON確認・直接編集</summary>
         <div class="panel-body"><textarea id="rawJson" class="json-area"></textarea><div class="add-row"><button id="applyJsonBtn" class="btn small primary" type="button">JSONを反映</button></div></div>
@@ -189,169 +235,13 @@
     <section class="preview-pane">
       <p class="privacy-note">履歴書には住所・連絡先・写真などの個人情報が含まれます。JSONやPDFを公開リポジトリへ追加しないでください。</p>
       <p id="layoutWarning" class="warning" hidden></p>
+      <div class="preview-toolbar"><span id="pageCount" aria-live="polite">A4縦・2ページ</span><label>表示倍率 <select id="zoomSelect"><option value="fit">幅に合わせる</option><option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option></select></label></div>
       <div id="documentStage" class="document-stage"></div>
-      <p class="data-note">「PDF出力 / 印刷」からPDF保存してください。A4・2ページで出力します。</p>
+      <p class="data-note">用紙はA4縦、倍率100%、ヘッダーとフッターはオフでPDF保存してください。標準は2ページです。入力内容はこのブラウザ内に保存され、別端末には同期されません。ブラウザデータを削除すると復元できないため、JSONをバックアップしてください。</p>
     </section>
   </main>
 </div>
 
-<script>
-(() => {
-  'use strict';
-  const STORAGE_KEY = 'rirekisho_pdf_editor_data_v1';
-  const CAREER_STORAGE_KEY = 'resume_pdf_editor_data_v1';
-  const APP_VERSION = '1.0.0';
-
-  function clone(value) {
-    return JSON.parse(JSON.stringify(value));
-  }
-
-  const EMPTY = {
-    schemaVersion:1, appVersion:APP_VERSION, exportedAt:'',
-    meta:{ title:'履 歴 書', date:'' },
-    profile:{ nameKana:'', name:'', birthDate:'', gender:'', photoDataUrl:'' },
-    contact:{ postalCode:'', address:'', phone:'', email:'' },
-    education:[], work:[], licenses:[], motivation:'', preferences:'',
-  };
-  const SAMPLE = {
-    ...clone(EMPTY),
-    meta:{ title:'履 歴 書', date:'2026年1月1日' },
-    profile:{ nameKana:'さんぷる たろう', name:'サンプル 太郎', birthDate:'1998-04-01', gender:'', photoDataUrl:'' },
-    contact:{ postalCode:'100-0001', address:'東京都千代田区サンプル1-2-3', phone:'090-0000-0000', email:'sample@example.com' },
-    education:[{year:'2014',month:'4',text:'東京都立サンプル高等学校 入学'},{year:'2017',month:'3',text:'東京都立サンプル高等学校 卒業'}],
-    work:[{year:'2018',month:'4',text:'株式会社サンプル 入社'},{year:'',month:'',text:'現在に至る'}],
-    licenses:[{year:'2018',month:'6',text:'普通自動車第一種運転免許 取得'}],
-    motivation:'これまでのWeb開発経験を活かし、利用者や運用現場の課題を改善できるサービス開発に携わりたいと考えています。',
-    preferences:'貴社規定に従います。'
-  };
-
-  let state = load();
-  let saveTimer = null;
-  const $ = (s,r=document) => r.querySelector(s);
-  const $$ = (s,r=document) => [...r.querySelectorAll(s)];
-  const esc = (v='') => String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-  const str = v => v == null ? '' : String(v);
-
-  function normalize(input) {
-    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('JSONの最上位はオブジェクトにしてください。');
-    const base = clone(EMPTY);
-    return {
-      ...base, ...input, schemaVersion:1, appVersion:APP_VERSION,
-      meta:{ title:str(input.meta?.title || base.meta.title), date:str(input.meta?.date) },
-      profile:{ nameKana:str(input.profile?.nameKana), name:str(input.profile?.name), birthDate:str(input.profile?.birthDate), gender:str(input.profile?.gender), photoDataUrl:str(input.profile?.photoDataUrl) },
-      contact:{ postalCode:str(input.contact?.postalCode), address:str(input.contact?.address), phone:str(input.contact?.phone), email:str(input.contact?.email) },
-      education:rows(input.education), work:rows(input.work), licenses:rows(input.licenses),
-      motivation:str(input.motivation), preferences:str(input.preferences)
-    };
-  }
-  function rows(value) { return Array.isArray(value) ? value.filter(v=>v&&typeof v==='object').map(v=>({year:str(v.year),month:str(v.month),text:str(v.text)})) : []; }
-  function load() { try { const raw=localStorage.getItem(STORAGE_KEY); return raw ? normalize(JSON.parse(raw)) : clone(EMPTY); } catch { return clone(EMPTY); } }
-  function setPath(path,value) { const keys=path.split('.'); let cur=state; keys.slice(0,-1).forEach(k=>cur=cur[k]); cur[keys.at(-1)]=value; commit(); }
-  function commit(rebuild=false) { renderPreview(); syncJson(); if (rebuild) renderEditors(); clearTimeout(saveTimer); $('#saveStatus').textContent='保存中…'; saveTimer=setTimeout(()=>{ try { localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); $('#saveStatus').textContent='保存済み'; } catch { $('#saveStatus').textContent='保存失敗'; } },220); }
-  function bindFields() { $$('[data-path]').forEach(el=>{ const path=el.dataset.path; const keys=path.split('.'); let value=state; keys.forEach(k=>value=value?.[k]); el.value=value ?? ''; el.addEventListener('input',()=>setPath(path,el.value)); }); }
-  function move(list,i,d) { const j=i+d; if(j<0||j>=list.length)return; [list[i],list[j]]=[list[j],list[i]]; }
-  function rowCard(item,index,list,label) {
-    const div=document.createElement('div'); div.className='item-card';
-    div.innerHTML=`<div class="item-head"><div class="item-title">${label} ${index+1}</div></div><div class="grid-3"><div class="field"><label>年</label><input class="y" type="text" value="${esc(item.year)}"></div><div class="field"><label>月</label><input class="m" type="text" value="${esc(item.month)}"></div><div class="field"><label>内容</label><input class="t" type="text" value="${esc(item.text)}"></div></div>`;
-    const head=$('.item-head',div);
-    const add=(txt,fn,cls='btn small')=>{ const b=document.createElement('button'); b.type='button'; b.className=cls; b.textContent=txt; b.addEventListener('click',fn); head.append(b); };
-    add('↑',()=>{move(list,index,-1);commit(true);}); add('↓',()=>{move(list,index,1);commit(true);}); add('削除',()=>{list.splice(index,1);commit(true);},'btn small danger');
-    $('.y',div).addEventListener('input',e=>{item.year=e.target.value;commit();}); $('.m',div).addEventListener('input',e=>{item.month=e.target.value;commit();}); $('.t',div).addEventListener('input',e=>{item.text=e.target.value;commit();});
-    return div;
-  }
-  function renderEditors() {
-    [['educationEditor','education','学歴'],['workEditor','work','職歴'],['licensesEditor','licenses','資格']].forEach(([id,key,label])=>{ const root=$('#'+id); root.innerHTML=''; state[key].forEach((item,i)=>root.append(rowCard(item,i,state[key],label))); });
-    bindFields(); updatePhoto(); updateAge();
-  }
-  function historyRows(list) { return list.map(r=>`<tr><td class="year">${esc(r.year)}</td><td class="month">${esc(r.month)}</td><td class="text">${esc(r.text)}</td></tr>`).join(''); }
-  function age() {
-    if(!state.profile.birthDate)return '';
-    const b=new Date(state.profile.birthDate+'T00:00:00'); const now=new Date();
-    if(Number.isNaN(b.getTime()))return '';
-    let a=now.getFullYear()-b.getFullYear(); const m=now.getMonth()-b.getMonth(); if(m<0||(m===0&&now.getDate()<b.getDate()))a--; return String(a);
-  }
-  function formatBirth() {
-    if(!state.profile.birthDate)return '';
-    const [y,m,d]=state.profile.birthDate.split('-'); return `${y}年${Number(m)}月${Number(d)}日生${age()?`（満${age()}歳）`:''}`;
-  }
-  function renderPreview() {
-    const stage=$('#documentStage'); const photo=state.profile.photoDataUrl ? `<img src="${esc(state.profile.photoDataUrl)}" alt="証明写真">` : '証明写真<br>30×40mm';
-    stage.innerHTML=`
-      <section class="resume-sheet">
-        <h1 class="rirekisho-title">${esc(state.meta.title || '履 歴 書')}</h1>
-        <p class="date-line">${esc(state.meta.date)} 現在</p>
-        <div class="basic-grid">
-          <table class="resume-table"><tbody>
-            <tr><th>ふりがな</th><td class="name-kana">${esc(state.profile.nameKana)}</td></tr>
-            <tr><th>氏名</th><td class="name-main">${esc(state.profile.name)}</td></tr>
-            <tr><th>生年月日</th><td>${esc(formatBirth())}${state.profile.gender?`　性別：${esc(state.profile.gender)}`:''}</td></tr>
-          </tbody></table>
-          <div class="photo-box">${photo}</div>
-        </div>
-        <table class="resume-table" style="margin-top:2mm"><tbody>
-          <tr><th>現住所</th><td>〒 ${esc(state.contact.postalCode)}<br>${esc(state.contact.address)}</td></tr>
-          <tr><th>連絡先</th><td>電話：${esc(state.contact.phone)}<br>メール：${esc(state.contact.email)}</td></tr>
-        </tbody></table>
-        <h2 class="section-title">学歴・職歴</h2>
-        <table class="resume-table history-table"><thead><tr><th class="year">年</th><th class="month">月</th><th>学歴・職歴</th></tr></thead><tbody>
-          <tr class="history-heading"><td></td><td></td><td>学歴</td></tr>${historyRows(state.education)}
-          <tr class="history-heading"><td></td><td></td><td>職歴</td></tr>${historyRows(state.work)}
-          <tr><td></td><td></td><td class="history-end">以上</td></tr>
-        </tbody></table>
-        <div class="sheet-footer">1 / 2</div>
-      </section>
-      <section class="resume-sheet">
-        <h1 class="rirekisho-title">${esc(state.meta.title || '履 歴 書')}</h1>
-        <p class="date-line">${esc(state.meta.date)} 現在　${esc(state.profile.name)}</p>
-        <h2 class="section-title">免許・資格</h2>
-        <table class="resume-table license-table"><thead><tr><th class="year">年</th><th class="month">月</th><th>免許・資格</th></tr></thead><tbody>${historyRows(state.licenses) || '<tr><td></td><td></td><td></td></tr>'}</tbody></table>
-        <h2 class="section-title">志望動機・自己PR</h2><div class="text-box">${esc(state.motivation)}</div>
-        <h2 class="section-title">本人希望記入欄</h2><div class="text-box preferences">${esc(state.preferences)}</div>
-        <div class="sheet-footer">2 / 2</div>
-      </section>`;
-    requestAnimationFrame(updateScale); updateAge(); checkOverflow();
-  }
-  function updateScale() { const pane=$('.preview-pane'); const width=Math.max(320,pane.clientWidth-56); const a4=210/25.4*96; document.documentElement.style.setProperty('--preview-scale',String(Math.min(1,width/a4))); }
-  function checkOverflow() { requestAnimationFrame(()=>{ const sheets=$$('.resume-sheet'); const overflow=sheets.some(s=>s.scrollHeight>s.clientHeight+4); const w=$('#layoutWarning'); w.hidden=!overflow; w.textContent=overflow?'内容がA4枠を超えています。項目を短くするか、行数を調整してください。':''; }); }
-  function updateAge() { const el=$('#agePreview'); if(el) el.value=age()?`${age()}歳`:''; }
-  function updatePhoto() { const img=$('#photoThumb'); if(state.profile.photoDataUrl){img.src=state.profile.photoDataUrl;img.style.visibility='visible';}else{img.removeAttribute('src');img.style.visibility='hidden';} }
-  function syncJson() { $('#rawJson').value=JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2); }
-  function addRow(key) { state[key].push({year:'',month:'',text:''}); commit(true); }
-  function extractYearMonth(text='') { const m=String(text).match(/(\d{4})年\s*(\d{1,2})月/); return m ? {year:m[1],month:m[2]} : {year:'',month:''}; }
-  function importCareer() {
-    try {
-      const raw=localStorage.getItem(CAREER_STORAGE_KEY); if(!raw){ alert('このブラウザに職務経歴書の保存データがありません。先に職務経歴書エディタで保存してください。'); return; }
-      const career=JSON.parse(raw); if(career.meta?.name&&!state.profile.name) state.profile.name=str(career.meta.name);
-      const imported=[];
-      (career.companies||[]).slice().reverse().forEach(company=>{
-        const period=str(company.period); const parts=period.split(/[〜~～]/); const start=extractYearMonth(parts[0]); const end=extractYearMonth(parts[1]);
-        imported.push({year:start.year,month:start.month,text:`${str(company.name)} 入社`});
-        if(end.year) imported.push({year:end.year,month:end.month,text:`${str(company.name)} 退職`});
-      });
-      if(imported.length){ state.work=imported; if(!state.work.some(r=>r.text==='現在に至る')) state.work.push({year:'',month:'',text:'現在に至る'}); commit(true); alert('職務経歴書から氏名・職歴を取り込みました。日付と表現を確認してください。'); }
-      else alert('取り込める会社情報がありませんでした。');
-    } catch(e){ alert('職務経歴書データの読み込みに失敗しました。'); }
-  }
-  function resizePhoto(file) {
-    const reader=new FileReader(); reader.onload=()=>{ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=354; c.height=472; const ctx=c.getContext('2d'); const scale=Math.max(c.width/img.width,c.height/img.height); const w=img.width*scale,h=img.height*scale; ctx.drawImage(img,(c.width-w)/2,(c.height-h)/2,w,h); state.profile.photoDataUrl=c.toDataURL('image/jpeg',.86); commit(true); }; img.src=reader.result; }; reader.readAsDataURL(file);
-  }
-  function downloadJson() { const payload={...state,exportedAt:new Date().toISOString()}; const blob=new Blob([JSON.stringify(payload,null,2)+'\n'],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`rirekisho-${new Date().toISOString().slice(0,10)}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
-  function importJsonFile(file) { if(!file)return; const r=new FileReader(); r.onload=()=>{ try{ state=normalize(JSON.parse(r.result)); commit(true); }catch(e){ alert(`JSONを読み込めませんでした: ${e.message}`); } }; r.readAsText(file); }
-
-  $('#addEducationBtn').addEventListener('click',()=>addRow('education')); $('#addWorkBtn').addEventListener('click',()=>addRow('work')); $('#addLicenseBtn').addEventListener('click',()=>addRow('licenses'));
-  $('#importCareerBtn').addEventListener('click',importCareer);
-  $('#exportJsonBtn').addEventListener('click',downloadJson);
-  $('#importJsonBtn').addEventListener('click',()=>$('#importFile').click()); $('#importFile').addEventListener('change',e=>{importJsonFile(e.target.files[0]);e.target.value='';});
-  $('#printBtn').addEventListener('click',()=>{ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{} window.print(); });
-  $('#newBtn').addEventListener('click',()=>{ if(confirm('入力内容を空にしますか？')){state=clone(EMPTY);commit(true);} });
-  $('#resetBtn').addEventListener('click',()=>{ if(confirm('入力内容を空にしますか？')){state=clone(EMPTY);commit(true);} });
-  $('#applyJsonBtn').addEventListener('click',()=>{ try{state=normalize(JSON.parse($('#rawJson').value));commit(true);}catch(e){alert(`JSONを反映できません: ${e.message}`);} });
-  $('#photoInput').addEventListener('change',e=>{ const f=e.target.files[0]; if(f)resizePhoto(f); e.target.value=''; });
-  $('#removePhotoBtn').addEventListener('click',()=>{state.profile.photoDataUrl='';commit(true);});
-  window.addEventListener('resize',updateScale);
-
-  renderEditors(); renderPreview(); syncJson();
-})();
-</script>
+<script src="assets/rirekisho.js" defer></script>
 </body>
 </html>

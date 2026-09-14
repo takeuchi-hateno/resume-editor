@@ -36,7 +36,7 @@ jobs:
           class BasicHTMLParser(HTMLParser):
               pass
 
-          for path in (Path('index.html'), Path('resume_pdf_editor.html')):
+          for path in Path('.').glob('*.html'):
               parser = BasicHTMLParser()
               parser.feed(path.read_text(encoding='utf-8'))
               parser.close()
@@ -64,11 +64,15 @@ jobs:
                   if self.in_script:
                       self.parts.append(data)
 
-          parser = ScriptParser()
-          parser.feed(Path('resume_pdf_editor.html').read_text(encoding='utf-8'))
-          print(''.join(parser.parts))
+          for path in Path('.').glob('*.html'):
+              parser = ScriptParser()
+              parser.feed(path.read_text(encoding='utf-8'))
+              print('\n'.join(parser.parts))
           PY
           node --check /tmp/resume-inline-scripts.js
+          for script in assets/*.js; do
+            node --check "$script"
+          done
 
           if grep -RInE 'https?://' --include='*.html' --include='*.js' --exclude-dir=.git .; then
             echo 'External HTTP/HTTPS communication destination found in application files.' >&2
