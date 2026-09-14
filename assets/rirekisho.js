@@ -4,7 +4,7 @@
   const STORAGE_KEY = 'rirekisho_pdf_editor_data_v1';
   const BACKUP_KEY = 'rirekisho_pdf_editor_backup_v1';
   const CAREER_STORAGE_KEY = 'resume_pdf_editor_data_v1';
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.2.0';
   const MAX_JSON_BYTES = 5 * 1024 * 1024;
   const EMPTY = {
     schemaVersion: 2,
@@ -15,7 +15,7 @@
     contact: { postalCode: '', addressKana: '', address: '', phone: '', email: '' },
     education: [], work: [], licenses: [],
     otherNotes: '', hobbies: '', remarks: '', motivation: '', preferences: '',
-    layout: { educationBlankRows: 4 }
+    layout: { educationBlankRows: 4, paper: 'a4' }
   };
 
   function select(selector, root = document) {
@@ -75,6 +75,7 @@
     for (const key of ['otherNotes', 'hobbies', 'remarks', 'motivation', 'preferences', 'exportedAt']) result[key] = text(input[key]);
     const blankRows = Number(input.layout?.educationBlankRows);
     if (Number.isInteger(blankRows)) result.layout.educationBlankRows = Math.max(0, Math.min(6, blankRows));
+    if (input.layout?.paper === 'a3') result.layout.paper = 'a3';
     return result;
   }
 
@@ -262,7 +263,7 @@
       <p class="sheet-date">${escapeHtml(state.meta.date)} 現在</p>
       <div class="identity">
         <div class="identity-kana"><span class="label">フリガナ</span><span class="kana-value">${escapeHtml(state.profile.nameKana)}</span><span class="label">※性別${gender}</span></div>
-        <div class="identity-name"><span class="label">氏 名</span><span class="name-main">${escapeHtml(state.profile.name)}</span><span class="seal">印</span></div>
+        <div class="identity-name"><span class="label">氏 名</span><span class="name-main">${escapeHtml(state.profile.name)}</span></div>
         <div class="birth-row"><span class="label">生年月日</span><span class="label">西暦</span><span class="birth-value">${escapeHtml(formatBirth())}</span><span class="label">生 ${ageLabel}</span></div>
       </div>
       <div class="photo-box">${photoMarkup()}</div>
@@ -291,23 +292,39 @@
       markup += sheet(`<div class="history-continuation">${table(history.splice(0, count), 28, heading)}</div>`);
     }
     markup += sheet(`<div class="history-continuation">${table(history, 5, heading)}</div>
-      <div class="licenses-block">${table(state.licenses.slice(0, 8), 8, '資格・語学')}</div>
-      ${formBox('other-notes', 'その他特記すべき事項', state.otherNotes)}
-      ${formBox('hobbies-box', '趣味・スポーツ・特技・好きな学科など', state.hobbies)}
-      ${formBox('remarks-box', '備考', state.remarks)}`);
+      <div class="licenses-block">${table(state.licenses.slice(0, 8), 8, '免許・資格')}</div>
+      ${formBox('motivation-box', '志望動機・自己PR・特技など', state.motivation)}
+      ${formBox('preferences-box', '本人希望記入欄 (職種・勤務時間・勤務地など)', state.preferences)}`);
     for (let index = 8; index < state.licenses.length; index += 28) {
-      markup += sheet(`<div class="history-continuation">${table(state.licenses.slice(index, index + 28), 28, '資格・語学 (続き)')}</div>`);
+      markup += sheet(`<div class="history-continuation">${table(state.licenses.slice(index, index + 28), 28, '免許・資格 (続き)')}</div>`);
     }
-    if (state.motivation || state.preferences) {
+    if (state.hobbies || state.remarks || state.otherNotes) {
       let extra = '<div class="extra-content">';
-      for (const [key, title] of [['motivation', '志望動機・自己PR'], ['preferences', '本人希望記入欄']]) {
+      for (const [key, title] of [['hobbies', '趣味・スポーツなど (補足)'], ['remarks', '備考'], ['otherNotes', 'その他特記事項']]) {
         if (state[key]) extra += `<h2>${title}</h2><div class="extra-box">${escapeHtml(state[key])}</div>`;
       }
       markup += sheet(`${extra}</div>`);
     }
     select('#documentStage').innerHTML = markup;
+    const frames = selectAll('.page-frame');
+    for (let index = 0; index < frames.length; index += 2) {
+      const spread = document.createElement('div');
+      spread.className = 'sheet-spread';
+      frames[index].before(spread);
+      spread.append(frames[index]);
+      if (frames[index + 1]) spread.append(frames[index + 1]);
+    }
+    document.documentElement.classList.toggle('paper-a3', state.layout.paper === 'a3');
+    select('#paperSelect').value = state.layout.paper;
+    let pageRule = '@page { size: A4 portrait; margin: 0; }';
+    let pageLabel = `A4縦・${frames.length}ページ`;
+    if (state.layout.paper === 'a3') {
+      pageRule = '@page { size: A3 landscape; margin: 0; }';
+      pageLabel = `A3横・${Math.ceil(frames.length / 2)}ページ`;
+    }
+    select('#printPageStyle').textContent = pageRule;
     select('#agePreview').value = age();
-    select('#pageCount').textContent = `A4縦・${selectAll('.resume-sheet').length}ページ`;
+    select('#pageCount').textContent = pageLabel;
     cancelAnimationFrame(layoutFrame);
     layoutFrame = requestAnimationFrame(() => { updateScale(); checkOverflow(); });
   }
@@ -316,7 +333,9 @@
     const pane = select('.preview-pane');
     const choice = select('#zoomSelect').value;
     const width = Math.max(180, pane.clientWidth - 56);
-    let scale = Math.min(1, width / (210 / 25.4 * 96));
+    let paperWidth = 210;
+    if (state.layout.paper === 'a3') paperWidth = 420;
+    let scale = Math.min(1, width / (paperWidth / 25.4 * 96));
     if (choice !== 'fit') scale = Number(choice);
     document.documentElement.style.setProperty('--preview-scale', String(scale));
     for (const frame of selectAll('.page-frame')) {
@@ -455,6 +474,10 @@
     state.profile.photoDataUrl = ''; commit(true);
   });
   select('#zoomSelect').addEventListener('change', updateScale);
+  select('#paperSelect').addEventListener('change', event => {
+    state.layout.paper = event.target.value;
+    commit();
+  });
   select('#printBtn').addEventListener('click', () => {
     if (checkOverflow()) { alert('枠を超えている内容を調整してから印刷してください。'); return; }
     if (!saveNow()) { alert('保存に失敗しました。JSONをバックアップしてください。'); return; }
