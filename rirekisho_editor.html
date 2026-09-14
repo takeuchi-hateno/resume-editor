@@ -201,6 +201,11 @@
   const STORAGE_KEY = 'rirekisho_pdf_editor_data_v1';
   const CAREER_STORAGE_KEY = 'resume_pdf_editor_data_v1';
   const APP_VERSION = '1.0.0';
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
   const EMPTY = {
     schemaVersion:1, appVersion:APP_VERSION, exportedAt:'',
     meta:{ title:'履 歴 書', date:'' },
@@ -209,7 +214,7 @@
     education:[], work:[], licenses:[], motivation:'', preferences:'',
   };
   const SAMPLE = {
-    ...structuredClone(EMPTY),
+    ...clone(EMPTY),
     meta:{ title:'履 歴 書', date:'2026年1月1日' },
     profile:{ nameKana:'さんぷる たろう', name:'サンプル 太郎', birthDate:'1998-04-01', gender:'', photoDataUrl:'' },
     contact:{ postalCode:'100-0001', address:'東京都千代田区サンプル1-2-3', phone:'090-0000-0000', email:'sample@example.com' },
@@ -225,7 +230,6 @@
   const $ = (s,r=document) => r.querySelector(s);
   const $$ = (s,r=document) => [...r.querySelectorAll(s)];
   const esc = (v='') => String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-  const clone = v => JSON.parse(JSON.stringify(v));
   const str = v => v == null ? '' : String(v);
 
   function normalize(input) {
